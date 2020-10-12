@@ -1,10 +1,14 @@
 
 import os
 import discord
+import yfinance as yf
+
 from dotenv import load_dotenv
 from discord.ext import commands
 
-print('ello')
+
+
+print('\n StonkBoy 0.1 \n')
 
 load_dotenv()
 
@@ -12,8 +16,22 @@ TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
 
-
 client = discord.Client()
+
+
+def stonkInfo(ticker):
+	name = ticker.info['longName']
+	sector = "sector: "+ticker.info['sector']
+	market_cap = "market cap: $"+ str(ticker.info['marketCap'])
+	opener = "open: " + str(ticker.info['open'])
+	day_low = "day low: "+ str(ticker.info['dayLow'])
+	day_high = "day high: " + str(ticker.info['dayHigh'])
+
+	out_str = "STOCK: " + name +"\n"+sector+"\n"+market_cap+"\n"+opener+"\n"+day_low+"\n"+day_high
+
+	return out_str 
+
+
 
 @client.event
 async def on_ready():
@@ -32,12 +50,22 @@ async def on_message(message):
 	if message.author == client.user:
 		return
 
+
 	if message.content.startswith('$oxi'):
 		await message.channel.send('Oxi sucks')
 
 	if message.content.startswith('.stonk'):
-		print(discord.version_info)
-		await message.channel.send(message.content)
+
+		temp = message.content
+		t_list = temp.split(' ')
+
+
+		stonk = yf.Ticker(t_list[1])
+
+
+		await message.channel.send(stonkInfo(stonk))
+
+	
 
 
 
