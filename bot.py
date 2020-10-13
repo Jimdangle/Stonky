@@ -2,6 +2,7 @@
 import os
 import discord
 import yfinance as yf
+import pandas as pd
 
 from datetime import date 
 from dotenv import load_dotenv
@@ -21,6 +22,14 @@ GUILD = os.getenv('DISCORD_GUILD')
 client = discord.Client()
 
 
+
+
+#custom functions
+
+# getClose
+# @param ticker (Yfinance ticker)
+# @return closing price
+
 def getClose(ticker):
 	ahoy = date.today()
 	history = ticker.history(start=ahoy)
@@ -29,18 +38,43 @@ def getClose(ticker):
 
 	return close
 
-# function for reporting stock info from a given ticker
-# @params accepts a ticker 
-# @returns a string for output
-# @problems Some tickers do not have the same dictionary keys 
-# raises errors when used on a ticker with out certain data fields
+
+# checkField
+# @params Yfinance ticker, main attribute, alternate attribute
+# @returns info from main or selected field  
+
+def checkField(ticker, main, alternate):
+	if main in ticker.info:
+		return ticker.info[main]
+	else:
+		return ticker.info[alternate]
+
+
+# getRSI
+# @param tick name ('aapl')
+# @return rsi (float)
+
+def getRSI(tick):
+	url = f'http://www.stockta.com/cgi-bin/analysis.pl?symb={tick}&mode=table&table=rsi'
+
+	df = pd.read_html(url)
+
+	rsi = df[6][1][0]
+
+	return rsi
+
+
+# calcChange
+# @params value1, value2
+# @return object wit
+
 def calcChange(val1, val2):
 	out_val = ((val1 - val2) / val2) * 100
 	sign = ""
 	if out_val > 0:
-		sign ="+"
+		sign =":arrow_up:"
 	else:
-		sign ="-"
+		sign =":arrow_down:"
 
 
 	out_str = f"{out_val:.3f}"+"%"
@@ -50,53 +84,36 @@ def calcChange(val1, val2):
 	return out_obj
 
 
+# stonkInfo
+# @param ticker object
+# @returns output string sent to discord
+
 def stonkInfo(ticker):
-	name = ""
-	sector = ""
+	name = checkField(ticker, 'longName', 'symbol')
+	name = f":office: **{name}**"
+	sector = checkField(ticker, 'sector', 'category')
+	sector = f":tools: **{sector}**"
 
-	if 'longName' in ticker.info:
-		name = ticker.info['longName']
-	else:
-		name = ticker.info['symbol']
+	tinfo = ticker.info
 
-	
-	if 'sector' in ticker.info:
-		sector = ticker.info['sector']
-	else:
-		sector = ticker.info['category']
-
-	name = ":office: " + name
-	sector = ":tools: " + sector
-
-	prev = ticker.info['regularMarketPreviousClose']
+	prev = tinfo['regularMarketPreviousClose']
 	cur = getClose(ticker)
+	difference = calcChange(cur,prev)
 
-	item = calcChange(cur, prev)
-	cur = f"{cur:.3f}"
-	change = ""
-	emoji = ""
+	cur = f'**Price**:money_with_wings: {cur:.3f}'
+	change = "**Growth**" +difference[1] + " " + difference[0]
 
-	if item[1] =="+":
-		emoji = ":arrow_up:"
-		
-	else:
-		emoji = ":arrow_down:"
-
-	change = "Growth: "+ emoji + " " + item[0]
-
-	mcap = f"{ticker.info['marketCap']:,d}"
-	
-	market_cap = "MCap: :dollar: "+ mcap
-	opener = "Op :alarm_clock: " + str(ticker.info['open'])
-	day_low = "Lo :red_square: "+ str(ticker.info['dayLow'])
-	day_high = "Hi :green_square: " + str(ticker.info['dayHigh'])
-	cur_price = "Price :money_with_wings: "+ cur
+	mcap = f"**Mcap**:dollar: {tinfo['marketCap']:,d}"
+	opener = f"**Open**:alarm_clock: {tinfo['open']}"
+	hilo = f"***Hi*** :green_square: {tinfo['dayHigh']}     ***Lo*** :red_square: {tinfo['dayLow']}"
+	rsi = f"**RSI** :muscle:{getRSI(tinfo['symbol'].upper())}"
 
 	out_str = name +"    [ "+sector+" ]\n"
-	out_str+= cur_price + "     " + change +"\n"
+	out_str+= cur + "     " + change +"\n\n"
 	out_str+= opener + "\n"
-	out_str+= day_high +"     " + day_low +"\n"
-	out_str+= market_cap
+	out_str+= hilo +"\n"
+	out_str+= mcap +"\n"
+	out_str+= rsi
 
 	return out_str 
 
