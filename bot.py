@@ -4,7 +4,7 @@ import discord
 import yfinance as yf
 import pandas as pd
 
-from datetime import date 
+from datetime import date
 from dotenv import load_dotenv
 from discord.ext import commands
 
@@ -14,7 +14,7 @@ print('\n StonkBoy 1.1 \n')
 
 load_dotenv()
 
-#private important data fields 
+#private important data fields
 TOKEN = os.getenv('DISCORD_TOKEN')
 GUILD = os.getenv('DISCORD_GUILD')
 
@@ -25,6 +25,9 @@ client = discord.Client()
 
 
 #custom functions
+
+
+
 
 
 # get methods
@@ -41,18 +44,27 @@ def getClose(ticker):
 
 	return close
 
+
+
+
 # getRSI
 # @param tick name ('aapl')
 # @return rsi (float)
 
 def getRSI(tick):
-	url = f'http://www.stockta.com/cgi-bin/analysis.pl?symb={tick}&mode=table&table=rsi'
+	try:
+		url = f'http://www.stockta.com/cgi-bin/analysis.pl?symb={tick}&mode=table&table=rsi'
 
-	df = pd.read_html(url)
+		df = pd.read_html(url)
 
-	rsi = df[6][1][0]
+		rsi = df[6][1][0]
 
-	return rsi
+		return rsi
+	except:
+		return "***RSI Unavailable***"
+
+
+
 
 
 
@@ -60,13 +72,16 @@ def getRSI(tick):
 
 # checkField
 # @params Yfinance ticker, main attribute, alternate attribute
-# @returns info from main or selected field  
+# @returns info from main or selected field
 
 def checkField(ticker, main, alternate):
 	if main in ticker.info:
 		return ticker.info[main]
 	else:
 		return ticker.info[alternate]
+
+
+
 
 
 # calcChange
@@ -88,6 +103,9 @@ def calcChange(val1, val2):
 
 	return out_obj
 
+
+
+
 #write out info used to be hardcoded in stonkInfo
 # @params ticker info args
 # @returns a clean output
@@ -100,7 +118,7 @@ def writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,period):
 	out_str+= mcap +"\n"
 	out_str+= rsi
 
-	return out_str 
+	return out_str
 
 
 
@@ -130,7 +148,7 @@ def stonkHistory(ticker,start_date,end_date=None,period=None):
 
 	try:
 		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {start_date} :fast_forward: {end_date} \n\n'
-	except: 
+	except:
 		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {start_date} :fast_forward: \n\n'
 	out_str += f'**Open**:hourglass_flowing_sand: {init_open:.3f}     **Close**:hourglass: {fin_close:.3f}\n'
 	out_str += f'**Hi** :green_square: {high_max:.3f}     **Lo** :red_square: {low_min:.3f}\n'
@@ -141,7 +159,10 @@ def stonkHistory(ticker,start_date,end_date=None,period=None):
 
 
 
-# Main function 
+
+
+
+# Main function
 
 # stonkInfo
 # @param ticker object
@@ -156,7 +177,7 @@ def stonkInfo(ticker,start_date=None,end_date=None, period='1d'):
 
 # default case aka no date
 	if start_date is None and end_date is None:
-		
+
 		print(start_date)
 		tinfo = ticker.info
 
@@ -174,7 +195,7 @@ def stonkInfo(ticker,start_date=None,end_date=None, period='1d'):
 
 		out_str = writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,'1d')
 
-		return out_str 
+		return out_str
 	else:
 
 		out_str=stonkHistory(ticker,start_date,end_date,period)
@@ -186,9 +207,7 @@ def stonkInfo(ticker,start_date=None,end_date=None, period='1d'):
 
 
 
-
-
-# DISCORDPY 
+# DISCORDPY
 
 
 #connecting to discord server
@@ -209,19 +228,31 @@ async def on_message(message):
 	if message.author == client.user:
 		return
 
+	#Save Content as a string
+	user_msg = message.content
+
+	#split by spaces to use for command and input
+	par_list = user_msg.split(" ")
+
+	# first arg is always the command, second is always the ticker, 3 - N are optional and will be saved to a list based on postions +2 and up
+	cmd = par_list[0]
+	try:
+		tick = par_list[1]
+		args = par_list[2:]
+	except:
+		tick = "AAPL"
+		args = [""]
+
 
 	# easter egg / debug command
-	if message.content.startswith('$oxi'):
+	if cmd == "$oxi":
 		await message.channel.send(':dollar: Oxi sucks')
 
 
 	#main command reports stock info
-	if message.content.startswith('.stonk') or message.content.startswith('.st'):
+	if cmd == '.stonk' or cmd == '.st':
 
-		temp = message.content
-		t_list = temp.split(' ')
-
-		if t_list[1] == 'help':
+		if tick == 'help':
 			out_str = ":man_mage: **Genius Bar** \n **stonkboi 1.1** \n\n Use StonkBoi by typing .stonk or .st in chat followed by a stocks ticker \n *(new feature)* follow the stock ticker with a date or a date range \n"
 			out_str += "if only one date is used it will generate stats from given date to todays date\n"
 			out_str += '\n **examples** \n'
@@ -232,19 +263,20 @@ async def on_message(message):
 			await message.channel.send(out_str)
 
 
-		stonk = yf.Ticker(t_list[1])
+		stonk = yf.Ticker(tick)
 		try:
 			try:
-				print("3 params")
-				await message.channel.send(stonkInfo(stonk, t_list[2], t_list[3]))
+				print("Attempting two Parameters")
+				await message.channel.send(stonkInfo(stonk, args[0], args[1]))
 			except:
-				print("2 params")
-				await message.channel.send(stonkInfo(stonk, t_list[2], date.today()))
+				print("Attempting Three Parameters")
+				await message.channel.send(stonkInfo(stonk, args[0], date.today()))
 		except:
-			print("single param")
+			print("Only Found a Single Parameter")
 			await message.channel.send(stonkInfo(stonk))
 
-	
+
+
 
 
 
