@@ -109,14 +109,14 @@ def calcChange(val1, val2):
 #write out info used to be hardcoded in stonkInfo
 # @params ticker info args
 # @returns a clean output
-def writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,period):
-	period = "("+period+")"
-	out_str = name +"    [ "+sector+" ]"+ period+ "\n"
-	out_str+= cur + "     " + change +"\n\n"
-	out_str+= opener + "\n"
-	out_str+= hilo +"\n"
-	out_str+= mcap +"\n"
-	out_str+= rsi
+def writeInfo(*args):
+	period = f"({args[8]})"
+	out_str = args[0] +"    [ "+args[1]+" ]"+ period+ "\n"
+	out_str+= args[2] + "     " + args[3] +"\n\n"
+	out_str+= args[4] + "\n"
+	out_str+= args[5] +"\n"
+	out_str+= args[6] +"\n"
+	out_str+= args[7]
 
 	return out_str
 
@@ -129,9 +129,17 @@ def writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,period):
 
 
 
-def stonkHistory(ticker,start_date,end_date=None,period=None):
+def stonkHistory(ticker,**alt):
 
-	hist = ticker.history(period=period,start=start_date,end=end_date)
+	if len(alt) > 2:
+		hist = ticker.history(start=alt['start_date'], end='end_date')
+		str_date = alt['start_date']
+		end_date = alt['end_date']
+	else:
+		hist = ticker.history(start=alt['start_date'], end=date.today())
+		str_date = alt['start_date']
+
+
 	ticker_name = ticker.info['symbol']
 
 	init_open = hist['Open'][0]
@@ -146,10 +154,12 @@ def stonkHistory(ticker,start_date,end_date=None,period=None):
 
 	out_str=''
 
+
+
 	try:
-		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {start_date} :fast_forward: {end_date} \n\n'
+		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {str_date} :fast_forward: {end_date} \n\n'
 	except:
-		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {start_date} :fast_forward: \n\n'
+		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {str_date} :fast_forward: \n\n'
 	out_str += f'**Open**:hourglass_flowing_sand: {init_open:.3f}     **Close**:hourglass: {fin_close:.3f}\n'
 	out_str += f'**Hi** :green_square: {high_max:.3f}     **Lo** :red_square: {low_min:.3f}\n'
 	out_str += f'**Change** {change[1]} {change[0]}'
@@ -168,39 +178,32 @@ def stonkHistory(ticker,start_date,end_date=None,period=None):
 # @param ticker object
 # @returns output string sent to discord
 
-def stonkInfo(ticker,start_date=None,end_date=None, period='1d'):
+def stonkInfo(ticker):
  #ticker info that wont change by date (i think)
 	name = checkField(ticker, 'longName', 'symbol')
 	name = f":chart_with_upwards_trend: **{name}**"
 	sector = checkField(ticker, 'sector', 'category')
 	sector = f":tools: **{sector}**"
 
-# default case aka no date
-	if start_date is None and end_date is None:
 
-		print(start_date)
-		tinfo = ticker.info
+	#print(start_date)
+	tinfo = ticker.info
 
-		prev = tinfo['regularMarketPreviousClose']
-		cur = getClose(ticker)
-		difference = calcChange(cur,prev)
+	prev = tinfo['regularMarketPreviousClose']
+	cur = getClose(ticker)
+	difference = calcChange(cur,prev)
 
-		cur = f'**Price**:money_with_wings: {cur:.3f}'
-		change = "**Growth**" +difference[1] + " " + difference[0]
+	cur = f'**Price**:money_with_wings: {cur:.3f}'
+	change = "**Growth**" +difference[1] + " " + difference[0]
 
-		mcap = f"**Mcap**:dollar: {tinfo['marketCap']:,d}"
-		opener = f"**Open**:alarm_clock: {tinfo['open']}"
-		hilo = f"***Hi*** :green_square: {tinfo['dayHigh']}     ***Lo*** :red_square: {tinfo['dayLow']}"
-		rsi = f"**RSI** :muscle:{getRSI(tinfo['symbol'].upper())}"
+	mcap = f"**Mcap**:dollar: {tinfo['marketCap']:,d}"
+	opener = f"**Open**:alarm_clock: {tinfo['open']}"
+	hilo = f"***Hi*** :green_square: {tinfo['dayHigh']}     ***Lo*** :red_square: {tinfo['dayLow']}"
+	rsi = f"**RSI** :muscle:{getRSI(tinfo['symbol'].upper())}"
 
-		out_str = writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,'1d')
+	out_str = writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,'1d')
 
-		return out_str
-	else:
-
-		out_str=stonkHistory(ticker,start_date,end_date,period)
-
-		return out_str
+	return out_str
 
 
 
@@ -238,15 +241,17 @@ async def on_message(message):
 	cmd = par_list[0]
 	try:
 		tick = par_list[1]
-		args = par_list[2:]
+		margs = par_list[2:]
+		print(margs)
 	except:
 		tick = "AAPL"
-		args = [""]
+		margs = [""]
 
 
 	# easter egg / debug command
 	if cmd == "$oxi":
-		await message.channel.send(':dollar: Oxi sucks')
+		strin = " "+tick if tick else " super hard"
+		await message.channel.send(':dollar: Oxi sucks' + strin)
 
 
 	#main command reports stock info
@@ -264,19 +269,17 @@ async def on_message(message):
 
 
 		stonk = yf.Ticker(tick)
-		try:
-			try:
-				print("Attempting two Parameters")
-				await message.channel.send(stonkInfo(stonk, args[0], args[1]))
-			except:
-				print("Attempting Three Parameters")
-				await message.channel.send(stonkInfo(stonk, args[0], date.today()))
-		except:
+
+		if margs:
+			if len(margs) > 1:
+				print("Attempting three Parameters")
+				await message.channel.send(stonkHistory(stonk, start_date = margs[0], end_date = margs[1]))
+			else:
+				print("Attempting Two Parameters")
+				await message.channel.send(stonkHistory(stonk, start_date= margs[0]))
+		else:
 			print("Only Found a Single Parameter")
 			await message.channel.send(stonkInfo(stonk))
-
-
-
 
 
 
