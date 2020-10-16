@@ -22,6 +22,8 @@ GUILD = os.getenv('DISCORD_GUILD')
 client = discord.Client()
 
 
+# There is a 93 character limit per line
+
 
 
 #custom functions
@@ -102,9 +104,6 @@ def calcChange(val1, val2):
 	out_obj = [out_str,sign]
 
 	return out_obj
-
-
-
 
 #write out info used to be hardcoded in stonkInfo
 # @params ticker info args
@@ -216,12 +215,12 @@ def stonkInfo(ticker):
 #connecting to discord server
 @client.event
 async def on_ready():
-	print(f'{client.user} is a gay fag')
+	print(f'{client.user} is ALIVE')
 
 	for guild in client.guilds:
 		if guild.name == GUILD:
 			break
-	print(f'{client.user} is gay\n' f'{guild.name}(id: {guild.id}')
+	print(f'{client.user} is CONNECTED TO \n' f'{guild.name}(id: {guild.id}')
 
 
 #chat commands
@@ -244,15 +243,17 @@ async def on_message(message):
 		margs = par_list[2:]
 		print(margs)
 	except:
-		tick = "AAPL"
-		margs = [""]
+		print('no other paramters found')
+		tick =''
+		margs = ['']
 
 
 	# easter egg / debug command
 	if cmd == "$oxi":
 		strin = " "+tick if tick else " super hard"
-		await message.channel.send(':dollar: Oxi sucks' + strin)
-
+		nums  = len('sucksBCDEFGHIJKLMNOPQRSTUVWXYZNOWIKNOWMYABCWONTYOUCOMEANDSHITWITHMEYOULITTLEFUCKINGBITCHIWILL')
+		await message.channel.send(':dollar: Oxi sucksBCDEFGHIJKLMNOPQRSTUVWXYZNOWIKNOWMYABCWONTYOUCOMEANDSHITWITHMEYOULITTLEFUCKINGBITCHIWILLKILLUANDPUTUINADITCHUPABOVETHECLOUDSSOHIGHLIKEAPOOPUPINTHESKYTWINKLEWINKLELONGASSSTRINGNOWIHAVEAWEIRDASSTHING' + strin)
+		await message.channel.send(f'{nums}')
 
 	#main command reports stock info
 	if cmd == '.stonk' or cmd == '.st':
