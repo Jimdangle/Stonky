@@ -3,14 +3,15 @@ import os
 import discord
 import yfinance as yf
 import pandas as pd
+import time
 
-from datetime import date
+import datetime as dt
 from dotenv import load_dotenv
 from discord.ext import commands
 
 
 
-print('\n StonkBoy 1.1 \n')
+print('\n StonkBoy 2.0 \n')
 
 load_dotenv()
 
@@ -31,22 +32,7 @@ client = discord.Client()
 
 
 
-
 # get methods
-
-# getClose
-# @param ticker (Yfinance ticker)
-# @return closing price as float
-
-def getClose(ticker):
-	ahoy = date.today()
-	history = ticker.history(start=ahoy)
-
-	close = history['Close'][0]
-
-	return close
-
-
 
 
 # getRSI
@@ -63,14 +49,13 @@ def getRSI(tick):
 
 		return rsi
 	except:
-		return "***RSI Unavailable***"
+		return "***NA***"
 
 
 
 
 
 
-# handle data and representation
 
 # checkField
 # @params Yfinance ticker, main attribute, alternate attribute
@@ -91,7 +76,7 @@ def checkField(ticker, main, alternate):
 # @return object wit
 
 def calcChange(val1, val2):
-	out_val = ((val1 - val2) / val2) * 100
+	out_val = ((val2 - val1) / val1) * 100
 	sign = ""
 	if out_val > 0:
 		sign =":arrow_up:"
@@ -99,70 +84,189 @@ def calcChange(val1, val2):
 		sign =":arrow_down:"
 
 
-	out_str = f"{out_val:.3f}"+"%"
+	out_str = f"{out_val:.3f}"
+	out_fl = float(out_str)
 
-	out_obj = [out_str,sign]
+	out_obj = [out_fl,sign]
 
 	return out_obj
 
-#write out info used to be hardcoded in stonkInfo
-# @params ticker info args
-# @returns a clean output
-def writeInfo(*args):
-	period = f"({args[8]})"
-	out_str = args[0] +"    [ "+args[1]+" ]"+ period+ "\n"
-	out_str+= args[2] + "     " + args[3] +"\n\n"
-	out_str+= args[4] + "\n"
-	out_str+= args[5] +"\n"
-	out_str+= args[6] +"\n"
-	out_str+= args[7]
 
-	return out_str
+# can only compare in a single dimension of list
+# takes in as many numbers as you want
+# returns the maximum value, maximum values pos in the list, the minimum value, and the minimum values pos in the par_list
 
+def compare(*args):
 
+	max = args[len(args)-1]
+	max_pos = 0
+	min = args[len(args)-1]
+	min_pos = 0
 
-# Stonk History (Brand new)
-# @params ticker, starting date, ending date, or period
-# - note that dates and periods can not be used together
-# @ returns a already formated string for message
+	if len(args) > 2:
+		print('somethings to compare')
+		for i in range(len(args)):
+			if args[i] > max:
+				max = args[i]
+				max_pos = i
+				#print(max)
+			if args[i] < min:
+				min = args[i]
+				min_pos = i
+				#print(min)
 
-
-
-def stonkHistory(ticker,**alt):
-
-	if len(alt) > 2:
-		hist = ticker.history(start=alt['start_date'], end='end_date')
-		str_date = alt['start_date']
-		end_date = alt['end_date']
+		return {'max':[max,max_pos],'min':[min,min_pos]}
+	elif len(args) == 2:
+		if args[0] > args[1]:
+			return {'max':[args[0],0],'min':[args[1],1]}
+		else:
+			return {'max':[args[1],1],'min':[args[0],0]}
 	else:
-		hist = ticker.history(start=alt['start_date'], end=date.today())
-		str_date = alt['start_date']
-
-
-	ticker_name = ticker.info['symbol']
-
-	init_open = hist['Open'][0]
-	fin_close = hist['Close'][len(hist['Close'])-1]
-
-	low_min = min(hist['Low'])
-	high_max = max(hist['High'])
-
-	change = calcChange(fin_close,init_open)
-
-	count = 1
-
-	out_str=''
+		return {'max':[args[0],0],'min':[args[0],0]}
 
 
 
-	try:
-		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {str_date} :fast_forward: {end_date} \n\n'
-	except:
-		out_str += f':chart_with_upwards_trend: **{ticker_name}**     :bookmark: {str_date} :fast_forward: \n\n'
-	out_str += f'**Open**:hourglass_flowing_sand: {init_open:.3f}     **Close**:hourglass: {fin_close:.3f}\n'
-	out_str += f'**Hi** :green_square: {high_max:.3f}     **Lo** :red_square: {low_min:.3f}\n'
-	out_str += f'**Change** {change[1]} {change[0]}'
 
+# Updated Stonk Info for the Modern Era
+# Now you can pass it any amount of arguments
+# it will sort through dates, and stocks
+# then it will figure out the appropriate action to represent them
+# it would get passed a list of strings like 'aapl', 'amzn', '2020-10-01'
+# then it will return a object of the requested Info
+# then using the compare method it will figure out the overall winner of each category
+
+def stonkInfo(*args):
+
+	emojis = {'chart':":chart_with_upwards_trend:",'dolwing':":money_with_wings:",'alarm':":alarm_clock:",'gr':":green_square:",'r':":red_square:",'muscle':":muscle:",'win':":crown:" }
+
+
+	stocks = []
+	dates = []
+
+	#this will contain the stock objects for output to another method
+	stonks = {}
+
+	# differentiates between a date and stocks
+	for arg in args:
+		if len(arg) > 4:
+			if len(dates) < 2:
+				dates.append(arg)
+		else:
+			stocks.append(arg.upper())
+
+	print(dates)
+	print(stocks)
+
+	#General finance info from tickers
+	tickers = []
+
+	#I needed this to get market cap, about it really
+	tinfos = []
+	#im gonna move forward with this being gone
+
+
+	date_length = len(dates)
+	print(date_length)
+	stocks_length = len(stocks)
+
+	if date_length == 0:
+		daychecker = dt.date.today().weekday()
+		if daychecker == 6:
+			time_diff = dt.timedelta(1)
+			date = dt.date.today() - time_diff
+		elif daychecker == 7:
+			time_diff = dt.timedelta(2)
+			date = dt.date.today() - time_diff
+		else:
+			date = dt.date.today()
+
+		tickers = yf.download(stocks,start=date)
+		print(tickers)
+	elif date_length == 1:
+		tickers = yf.download(stocks, start=dates[0], end= dt.date.today())
+	elif date_length == 2:
+		tickers = yf.download(stocks, start= dates[0], end = dates[1])
+
+
+
+	print(tickers.keys())
+
+	open = []
+	close = []
+	high = []
+	low = []
+	over_change = []
+
+	#print(tickers['Adj Close'])
+	# clacChange outputs an object (0: float of change formated to .001, 1: up or down arrow)
+	# use reactions to get specific info on a stock
+
+	over_length = len(tickers['Open']) - 1
+
+	if date_length == 1 or date_length == 2:
+		if stocks_length ==1:
+			open.append(tickers['Open'][0])
+			open.append(tickers['Open'][over_length])
+
+			close.append(tickers['Close'][0])
+			close.append(tickers['Close'][over_length])
+
+			for i in range(over_length+1):
+				high.append(tickers['High'][i])
+				low.append(tickers['Low'][i])
+
+				over_change.append(calcChange(open[0],close[1]))
+				max_high = compare(*high)['max'][0]
+				min_low = compare(*low)['min'][0]
+
+
+
+		else:
+			count =0
+			for stonk in stocks:
+				open.append([tickers['Open'][stonk][0],tickers['Open'][stonk][over_length]])
+				close.append([tickers['Close'][stonk][0],tickers['Close'][stonk][over_length]])
+				over_change.append(calcChange(open[0],close[1]))
+				count += 1
+
+				high.append([tickers['High'][stonk][0],tickers['High'][stonk][over_length]])
+				low.append([tickers['Low'][stonk][0],tickers['Low'][stonk][over_length]])
+	else:
+
+
+		if stocks_length == 1:
+			open.append(tickers['Open'][0])
+			close.append(tickers['Close'][0])
+			high.append(tickers['High'][0])
+			low.append(tickers['Low'][0])
+
+			over_change.append(calcChange(open[0],close[0]))
+
+		else:
+			for stonk in stocks:
+				open.append(tickers['Open'][stonk][0])
+				close.append(tickers['Close'][stonk][0])
+				low.append(tickers['Close'][stonk][0])
+				high.append(tickers['High'][stonk][0])
+				over_change.append(calcChange(open[0],close[0]))
+
+	ticker_str = ''
+	open_str = ''
+	close_str =''
+	high_str =''
+	low_str = ''
+	change_str = ''
+	rsi = ''
+	for i in range(len(stocks)):
+		ticker_str += f"{emojis['chart']}{stocks[i]:<9}"
+		open_str += f"{emojis['dolwing']}{close[i]:.3f} "
+		close_str += f"{emojis['alarm']}{open[i]:.3f} "
+		high_str += f"{emojis['gr']}{high[i]:.3f} "
+		low_str += f"{emojis['r']}{low[i]:.3f} "
+		change_str += f"{over_change[i][1]}{over_change[i][0]:.3f} "
+		rsi += f"{emojis['muscle']}{getRSI(stocks[i]):.2f}"
+
+	out_str = f" {ticker_str:} {dates}\n {open_str:>11} \n {close_str:>11} \n {high_str:>11} \n {low_str:>11} \n {change_str:>11} \n {rsi:>11}"
 
 	return out_str
 
@@ -171,45 +275,21 @@ def stonkHistory(ticker,**alt):
 
 
 
-# Main function
-
-# stonkInfo
-# @param ticker object
-# @returns output string sent to discord
-
-def stonkInfo(ticker):
- #ticker info that wont change by date (i think)
-	name = checkField(ticker, 'longName', 'symbol')
-	name = f":chart_with_upwards_trend: **{name}**"
-	sector = checkField(ticker, 'sector', 'category')
-	sector = f":tools: **{sector}**"
 
 
-	#print(start_date)
-	tinfo = ticker.info
 
-	prev = tinfo['regularMarketPreviousClose']
-	cur = getClose(ticker)
-	difference = calcChange(cur,prev)
-
-	cur = f'**Price**:money_with_wings: {cur:.3f}'
-	change = "**Growth**" +difference[1] + " " + difference[0]
-
-	mcap = f"**Mcap**:dollar: {tinfo['marketCap']:,d}"
-	opener = f"**Open**:alarm_clock: {tinfo['open']}"
-	hilo = f"***Hi*** :green_square: {tinfo['dayHigh']}     ***Lo*** :red_square: {tinfo['dayLow']}"
-	rsi = f"**RSI** :muscle:{getRSI(tinfo['symbol'].upper())}"
-
-	out_str = writeInfo(name,sector,cur,change,opener,hilo,mcap,rsi,'1d')
-
-	return out_str
-
+def helpMenu():
+	print('Help Menu')
 
 
 
 
 
 # DISCORDPY
+
+
+
+
 
 
 #connecting to discord server
@@ -223,6 +303,10 @@ async def on_ready():
 	print(f'{client.user} is CONNECTED TO \n' f'{guild.name}(id: {guild.id}')
 
 
+
+
+
+
 #chat commands
 @client.event
 async def on_message(message):
@@ -234,53 +318,21 @@ async def on_message(message):
 	user_msg = message.content
 
 	#split by spaces to use for command and input
-	par_list = user_msg.split(" ")
+	args = user_msg.split(" ")
 
-	# first arg is always the command, second is always the ticker, 3 - N are optional and will be saved to a list based on postions +2 and up
-	cmd = par_list[0]
-	try:
-		tick = par_list[1]
-		margs = par_list[2:]
-		print(margs)
-	except:
-		print('no other paramters found')
-		tick =''
-		margs = ['']
+	command = args[0]
 
+	args = args[1:]
 
-	# easter egg / debug command
-	if cmd == "$oxi":
-		strin = " "+tick if tick else " super hard"
-		nums  = len('sucksBCDEFGHIJKLMNOPQRSTUVWXYZNOWIKNOWMYABCWONTYOUCOMEANDSHITWITHMEYOULITTLEFUCKINGBITCHIWILL')
-		await message.channel.send(':dollar: Oxi sucksBCDEFGHIJKLMNOPQRSTUVWXYZNOWIKNOWMYABCWONTYOUCOMEANDSHITWITHMEYOULITTLEFUCKINGBITCHIWILLKILLUANDPUTUINADITCHUPABOVETHECLOUDSSOHIGHLIKEAPOOPUPINTHESKYTWINKLEWINKLELONGASSSTRINGNOWIHAVEAWEIRDASSTHING' + strin)
-		await message.channel.send(f'{nums}')
+	if command == ".st" or command == ".stonk":
+		await message.channel.send(stonkInfo(*args))
 
-	#main command reports stock info
-	if cmd == '.stonk' or cmd == '.st':
-
-		if tick == 'help':
-			out_str = ":man_mage: **Genius Bar** \n **stonkboi 1.1** \n\n Use StonkBoi by typing .stonk or .st in chat followed by a stocks ticker \n *(new feature)* follow the stock ticker with a date or a date range \n"
-			out_str += "if only one date is used it will generate stats from given date to todays date\n"
-			out_str += '\n **examples** \n'
-			out_str += '*.stonk aapl* or *.st aapl* this will return current data on aapl stock\n'
-			out_str += '*.stonk amzn 2020-09-10* or *.st amzn 2020-09-10* this will return data on amzn stock from 09/10/2020 to Current Date \n'
-			out_str += '*.stonk plm 2020-09-03 2020-09-30* or *.st plm 2020-09-03 2020-09-30* will return data on plm stock from 09/03/2020 to 09/30/2020'
-
-			await message.channel.send(out_str)
+	if command == ".sth" or command == '.stonkh':
+		helpMenu()
 
 
-		stonk = yf.Ticker(tick)
 
-		if margs:
-			if len(margs) > 1:
-				print("Attempting three Parameters")
-				await message.channel.send(stonkHistory(stonk, start_date = margs[0], end_date = margs[1]))
-			else:
-				print("Attempting Two Parameters")
-				await message.channel.send(stonkHistory(stonk, start_date= margs[0]))
-		else:
-			print("Only Found a Single Parameter")
-			await message.channel.send(stonkInfo(stonk))
+
 
 
 
