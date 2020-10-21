@@ -154,19 +154,17 @@ def stonkInfo(*args):
 		else:
 			stocks.append(arg.upper())
 
+	# print the arguments that were given from the user
 	print(dates)
 	print(stocks)
 
-	#General finance info from tickers
-	tickers = []
-
-	#I needed this to get market cap, about it really
-	tinfos = []
-	#im gonna move forward with this being gone
 
 
+	#see how many dates were entered by the user
 	date_length = len(dates)
 	print(date_length)
+
+	#how many tickers were entered
 	stocks_length = len(stocks)
 
 	if date_length == 0:
@@ -204,12 +202,13 @@ def stonkInfo(*args):
 	over_length = len(tickers['Open']) - 1
 
 	if date_length == 1 or date_length == 2:
+		print(over_length)
 		if stocks_length ==1:
 			open.append(tickers['Open'][0])
 			open.append(tickers['Open'][over_length])
 
-			close.append(tickers['Close'][0])
-			close.append(tickers['Close'][over_length])
+			close.append(tickers['Adj Close'][0])
+			close.append(tickers['Adj Close'][over_length])
 
 			for i in range(over_length+1):
 				high.append(tickers['High'][i])
@@ -222,12 +221,12 @@ def stonkInfo(*args):
 
 
 		else:
-			count =0
+
 			for stonk in stocks:
 				open.append([tickers['Open'][stonk][0],tickers['Open'][stonk][over_length]])
-				close.append([tickers['Close'][stonk][0],tickers['Close'][stonk][over_length]])
+				close.append([tickers['Adj Close'][stonk][0],tickers['Adj Close'][stonk][over_length]])
 				over_change.append(calcChange(open[0],close[1]))
-				count += 1
+
 
 				high.append([tickers['High'][stonk][0],tickers['High'][stonk][over_length]])
 				low.append([tickers['Low'][stonk][0],tickers['Low'][stonk][over_length]])
@@ -236,7 +235,7 @@ def stonkInfo(*args):
 
 		if stocks_length == 1:
 			open.append(tickers['Open'][0])
-			close.append(tickers['Close'][0])
+			close.append(tickers['Adj Close'][0])
 			high.append(tickers['High'][0])
 			low.append(tickers['Low'][0])
 
@@ -245,11 +244,12 @@ def stonkInfo(*args):
 		else:
 			for stonk in stocks:
 				open.append(tickers['Open'][stonk][0])
-				close.append(tickers['Close'][stonk][0])
-				low.append(tickers['Close'][stonk][0])
+				close.append(tickers['Adj Close'][stonk][0])
+				low.append(tickers['Low'][stonk][0])
 				high.append(tickers['High'][stonk][0])
 				over_change.append(calcChange(open[0],close[0]))
 
+	print(over_change)
 	ticker_str = ''
 	open_str = ''
 	close_str =''
@@ -258,13 +258,13 @@ def stonkInfo(*args):
 	change_str = ''
 	rsi = ''
 	for i in range(len(stocks)):
-		ticker_str += f"{emojis['chart']}{stocks[i]:<9}"
+		ticker_str += f"{emojis['chart']}{stocks[i]:<9} "
 		open_str += f"{emojis['dolwing']}{close[i]:.3f} "
 		close_str += f"{emojis['alarm']}{open[i]:.3f} "
 		high_str += f"{emojis['gr']}{high[i]:.3f} "
 		low_str += f"{emojis['r']}{low[i]:.3f} "
 		change_str += f"{over_change[i][1]}{over_change[i][0]:.3f} "
-		rsi += f"{emojis['muscle']}{getRSI(stocks[i]):.2f}"
+		rsi += f"{emojis['muscle']}{getRSI(stocks[i]):.2f} "
 
 	out_str = f" {ticker_str:} {dates}\n {open_str:>11} \n {close_str:>11} \n {high_str:>11} \n {low_str:>11} \n {change_str:>11} \n {rsi:>11}"
 
